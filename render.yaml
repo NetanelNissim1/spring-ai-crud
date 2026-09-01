@@ -1,0 +1,30 @@
+# ===================================================================
+# Render.com Infrastructure-as-Code Blueprint
+# Deploy Spring Boot Java 21 Backend + Managed PostgreSQL Database
+# ===================================================================
+services:
+  - type: web
+    name: spring-ai-crud-backend
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    plan: free
+    region: frankfurt
+    healthCheckPath: /api/products/categories
+    envVars:
+      - key: SPRING_DATASOURCE_URL
+        fromDatabase:
+          name: productdb
+          property: connectionString
+      - key: SPRING_JPA_HIBERNATE_DDL_AUTO
+        value: update
+      - key: SPRING_PROFILES_ACTIVE
+        value: postgres
+      - key: APP_AI_MOCK_FALLBACK_ENABLED
+        value: "true"
+
+databases:
+  - name: productdb
+    databaseName: productdb
+    user: postgres
+    plan: free
+    region: frankfurt
