@@ -25,6 +25,6 @@ services:
 databases:
   - name: productdb
     databaseName: productdb
-    user: postgres
+    user: product_user
     plan: free
     region: frankfurt
