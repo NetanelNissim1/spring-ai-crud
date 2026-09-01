@@ -476,6 +476,54 @@
         </div>
     </div>
 
+    <!-- מודאל אישור מחיקת מוצר מעוצב (Custom Delete Confirmation Modal) -->
+    <div id="deleteModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4 transition-all duration-300">
+        <div class="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-slate-100 text-right transform transition-all">
+            <!-- אייקון אזהרה מעוצב -->
+            <div class="flex items-center gap-3.5 mb-4">
+                <div class="w-12 h-12 rounded-2xl bg-rose-100 text-rose-600 flex items-center justify-center text-xl shrink-0 shadow-inner">
+                    <i class="fa-solid fa-trash-can animate-bounce"></i>
+                </div>
+                <div>
+                    <h3 class="text-lg font-bold text-slate-800">אישור מחיקת מוצר</h3>
+                    <p class="text-xs text-slate-500">פעולה זו תסיר את המוצר לצמיתות מהמערכת</p>
+                </div>
+            </div>
+
+            <!-- פרטי המוצר המיועד למחיקה -->
+            <div class="p-4 bg-rose-50/60 rounded-2xl border border-rose-100 mb-5 space-y-2 text-xs">
+                <div class="flex items-center justify-between">
+                    <span class="text-slate-500 font-medium">שם המוצר:</span>
+                    <strong class="text-slate-900 font-bold max-w-[220px] truncate" id="delProdName">--</strong>
+                </div>
+                <div class="flex items-center justify-between">
+                    <span class="text-slate-500 font-medium">מזהה (ID):</span>
+                    <span class="font-mono text-indigo-700 font-bold bg-indigo-50 px-2 py-0.5 rounded" id="delProdId">--</span>
+                </div>
+                <div class="flex items-center justify-between">
+                    <span class="text-slate-500 font-medium">קטגוריה:</span>
+                    <span class="px-2 py-0.5 rounded bg-slate-200 text-slate-700 font-medium" id="delProdCat">--</span>
+                </div>
+            </div>
+
+            <p class="text-xs text-rose-600 font-medium mb-5 flex items-center gap-1.5">
+                <i class="fa-solid fa-circle-exclamation"></i>
+                <span>שים לב: לא ניתן יהיה לשחזר את נתוני המוצר לאחר המחיקה.</span>
+            </p>
+
+            <!-- כפתורי פעולה -->
+            <div class="flex items-center justify-end gap-2.5 pt-3 border-t border-slate-100">
+                <button type="button" onclick="closeDeleteModal()" class="px-4 py-2.5 rounded-xl border border-slate-300 text-slate-700 hover:bg-slate-100 font-medium text-xs transition">
+                    ביטול
+                </button>
+                <button type="button" id="confirmDeleteBtn" onclick="executeDeleteProduct()" class="px-5 py-2.5 rounded-xl bg-gradient-to-l from-rose-600 to-red-600 hover:from-rose-700 hover:to-red-700 text-white font-bold text-xs shadow-md shadow-rose-200 flex items-center gap-1.5 transition">
+                    <i class="fa-solid fa-trash-can"></i>
+                    <span>כן, מחק מוצר</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
     <!-- הודעת חיווי צפה (Toast) -->
     <div id="toast" class="fixed bottom-5 right-5 bg-slate-900 text-white px-4 py-3 rounded-2xl shadow-xl z-50 text-xs font-medium transform -translate-y-10 opacity-0 pointer-events-none transition-all duration-300 flex items-center gap-2">
         <i id="toastIcon" class="fa-solid fa-circle-check text-emerald-400 text-sm"></i>
@@ -720,7 +768,7 @@
                             <button onclick="editProduct(${p.id})" title="עריכת מוצר" class="p-1.5 rounded-lg text-slate-600 hover:bg-slate-100 transition">
                                 <i class="fa-solid fa-pen-to-square"></i>
                             </button>
-                            <button onclick="deleteProduct(${p.id})" title="מחיקת מוצר" class="p-1.5 rounded-lg text-rose-600 hover:bg-rose-50 transition">
+                            <button onclick="promptDeleteProduct(${p.id}, '${escapeQuotes(p.name)}', '${escapeQuotes(p.category)}')" title="מחיקת מוצר" class="p-1.5 rounded-lg text-rose-600 hover:bg-rose-50 transition">
                                 <i class="fa-solid fa-trash-can"></i>
                             </button>
                         </div>
@@ -866,8 +914,30 @@
             loadStats();
         }
 
-        async function deleteProduct(id) {
-            if (!confirm(`האם אתה בטוח שברצונך למחוק את מוצר מספר #${id}?`)) return;
+        // ניהול מודאל מחיקת מוצר מעוצב
+        let productToDelete = null;
+
+        function promptDeleteProduct(id, name, category) {
+            productToDelete = { id: parseInt(id), name, category };
+            document.getElementById('delProdId').textContent = '#' + id;
+            document.getElementById('delProdName').textContent = name || ('מוצר #' + id);
+            document.getElementById('delProdCat').textContent = category || 'כללי';
+            document.getElementById('deleteModal').classList.remove('hidden');
+        }
+
+        function closeDeleteModal() {
+            productToDelete = null;
+            document.getElementById('deleteModal').classList.add('hidden');
+        }
+
+        async function executeDeleteProduct() {
+            if (!productToDelete || !productToDelete.id) return;
+            const id = productToDelete.id;
+            const btn = document.getElementById('confirmDeleteBtn');
+            const originalHtml = btn.innerHTML;
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> מוחק...';
+
             try {
                 await fetch(getApiUrl(`/api/products/${id}`), { method: 'DELETE' });
             } catch (e) {}
@@ -876,7 +946,11 @@
             localProductsStore = localProductsStore.filter(p => p.id !== id);
             localStorage.setItem('CATALOG_LOCAL_PRODUCTS', JSON.stringify(localProductsStore));
 
-            showToast('המוצר נמחק בהצלחה');
+            closeDeleteModal();
+            btn.disabled = false;
+            btn.innerHTML = originalHtml;
+
+            showToast('המוצר נמחק בהצלחה!');
             loadProducts(currentPage);
             loadCategories();
             loadStats();
