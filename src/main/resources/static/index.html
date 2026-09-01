@@ -145,13 +145,15 @@
             </div>
             <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between">
                 <div>
-                    <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider">מנוע AI קטלוגי</p>
-                    <p class="text-sm font-bold text-emerald-600 mt-2 flex items-center gap-1.5">
-                        <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-ping"></span> פעיל ומחובר
+                    <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider">חיבור שרת וענן</p>
+                    <p class="text-xs font-bold mt-2" id="syncStatusBadge">
+                        <span class="text-amber-600 flex items-center gap-1.5 cursor-pointer" onclick="openServerConfigModal()">
+                            <span class="w-2 h-2 rounded-full bg-amber-500"></span> מקומי (לחץ לחיבור ענן)
+                        </span>
                     </p>
                 </div>
-                <div class="w-12 h-12 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center text-xl">
-                    <i class="fa-solid fa-brain"></i>
+                <div class="w-12 h-12 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center text-xl cursor-pointer" onclick="openServerConfigModal()" title="הגדרות שרת ענן משותף">
+                    <i class="fa-solid fa-cloud"></i>
                 </div>
             </div>
         </div>
@@ -704,6 +706,16 @@
 
             document.getElementById('statTotal').textContent = total;
             document.getElementById('statLowStock').textContent = lowStock;
+
+            const syncBadge = document.getElementById('syncStatusBadge');
+            const customApi = localStorage.getItem('API_BASE_URL');
+            if (syncBadge) {
+                if (customApi) {
+                    syncBadge.innerHTML = `<span class="text-emerald-600 flex items-center gap-1.5 cursor-pointer" onclick="openServerConfigModal()"><span class="w-2 h-2 rounded-full bg-emerald-500 animate-ping"></span> ענן משותף פעיל</span>`;
+                } else {
+                    syncBadge.innerHTML = `<span class="text-amber-600 flex items-center gap-1.5 cursor-pointer" onclick="openServerConfigModal()"><span class="w-2 h-2 rounded-full bg-amber-500"></span> מקומי (לחץ לחיבור ענן)</span>`;
+                }
+            }
         }
 
         async function loadProducts(page = 0) {
