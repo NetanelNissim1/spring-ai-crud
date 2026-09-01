@@ -4,11 +4,13 @@
 FROM maven:3.9.8-eclipse-temurin-21 AS build
 WORKDIR /app
 
-# Cache Maven dependencies
+ENV MAVEN_OPTS="-Xmx512m -XX:+UseG1GC"
+
+# Copy POM and download dependencies
 COPY pom.xml .
 RUN mvn dependency:go-offline -B || true
 
-# Copy source code and build production jar
+# Copy source code and build jar
 COPY src ./src
 RUN mvn clean package -DskipTests
 
@@ -18,18 +20,16 @@ RUN mvn clean package -DskipTests
 FROM eclipse-temurin:21-jre-alpine
 WORKDIR /app
 
-# Create non-root app user
-RUN addgroup -S appgroup && adduser -S appuser -G appgroup
+# Create non-root app user and ensure log directory exists
+RUN addgroup -S appgroup && adduser -S appuser -G appgroup && mkdir -p /app/logs && chown -R appuser:appgroup /app
 USER appuser
 
-# Copy built artifact from builder stage
-COPY --from=build /app/target/*.jar app.jar
+# Copy built artifact
+COPY --from=build --chown=appuser:appgroup /app/target/*.jar app.jar
 
-# Expose web server port
+# Production runtime settings
+ENV SPRING_PROFILES_ACTIVE=postgres
+ENV PORT=8080
 EXPOSE 8080
 
-# Production environment variables
-ENV SPRING_PROFILES_ACTIVE=postgres
-ENV JAVA_OPTS="-XX:+UseG1GC -XX:MaxRAMPercentage=75.0"
-
-ENTRYPOINT ["sh", "-c", "java $JAVA_OPTS -jar app.jar"]
+ENTRYPOINT ["java", "-XX:+UseG1GC", "-XX:MaxRAMPercentage=75.0", "-jar", "app.jar"]
