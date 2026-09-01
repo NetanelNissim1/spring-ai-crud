@@ -582,16 +582,28 @@
             }
         }
 
+        // שרת ה-Backend המרכזי בענן המסנכרן את כל המשתמשים מכל המחשבים בעולם
+        const DEFAULT_CLOUD_BACKEND = 'https://spring-ai-crud-backend.onrender.com';
+
         // תמיכה בפריסה בענן (Vercel / Render / Localhost)
         function getApiUrl(path) {
-            const customBase = localStorage.getItem('API_BASE_URL') || '';
-            const cleanBase = customBase.replace(/\/+$/, '');
+            let base = localStorage.getItem('API_BASE_URL');
+            if (base === null || base === undefined || base.trim() === '') {
+                const isLocalHost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+                base = isLocalHost ? '' : DEFAULT_CLOUD_BACKEND;
+            }
+            const cleanBase = (base || '').replace(/\/+$/, '');
             const cleanPath = path.startsWith('/') ? path : '/' + path;
             return cleanBase + cleanPath;
         }
 
         function openServerConfigModal() {
-            document.getElementById('serverBaseUrlInput').value = localStorage.getItem('API_BASE_URL') || '';
+            let current = localStorage.getItem('API_BASE_URL');
+            if (current === null || current === undefined || current.trim() === '') {
+                const isLocalHost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+                current = isLocalHost ? '' : DEFAULT_CLOUD_BACKEND;
+            }
+            document.getElementById('serverBaseUrlInput').value = current;
             document.getElementById('serverModal').classList.remove('hidden');
         }
 
@@ -606,7 +618,7 @@
                 showToast('כתובת השרת עודכנה ל: ' + url);
             } else {
                 localStorage.removeItem('API_BASE_URL');
-                showToast('כתובת השרת אופסה לברירת מחדל');
+                showToast('כתובת השרת אופסה לברירת המחדל');
             }
             closeServerConfigModal();
             loadCategories();
