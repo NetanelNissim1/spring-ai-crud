@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration scan="true" scanPeriod="30 seconds">
+
+    <!-- Read configuration from application.properties with fallback defaults -->
+    <springProperty scope="context" name="LOG_DIR" source="logging.file.path" defaultValue="logs"/>
+    <springProperty scope="context" name="REST_LOG_FILE" source="logging.rest.file-name" defaultValue="logs/rest-execution.log"/>
+    <springProperty scope="context" name="REST_LOG_PATTERN" source="logging.rest.file-pattern" defaultValue="logs/rest-execution-%d{yyyy-MM-dd}.log"/>
+    <springProperty scope="context" name="ERROR_LOG_FILE" source="logging.error.file-name" defaultValue="logs/error.log"/>
+    <springProperty scope="context" name="ERROR_LOG_PATTERN" source="logging.error.file-pattern" defaultValue="logs/error-%d{yyyy-MM-dd}.log"/>
+    <springProperty scope="context" name="MAX_HISTORY" source="logging.rest.max-history" defaultValue="30"/>
+
+    <!-- 1. Console Logging Appender -->
+    <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder>
+            <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} %highlight(%-5level) %cyan([%thread]) %magenta(%logger{36}) - %msg%n</pattern>
+            <charset>UTF-8</charset>
+        </encoder>
+    </appender>
+
+    <!-- 2. Daily Rolling File Appender for REST Executions -->
+    <appender name="REST_EXECUTION_FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>${REST_LOG_FILE}</file>
+        <append>true</append>
+        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+            <!-- Daily rollover: creates a new log file every day at midnight -->
+            <fileNamePattern>${REST_LOG_PATTERN}</fileNamePattern>
+            <!-- Keep 30 days worth of history -->
+            <maxHistory>${MAX_HISTORY}</maxHistory>
+        </rollingPolicy>
+        <encoder>
+            <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n</pattern>
+            <charset>UTF-8</charset>
+        </encoder>
+    </appender>
+
+    <!-- 3. Dedicated Daily Rolling File Appender for Application ERRORS & WARNS -->
+    <appender name="ERROR_FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>${ERROR_LOG_FILE}</file>
+        <append>true</append>
+        <!-- Filter to record only WARN and ERROR events -->
+        <filter class="ch.qos.logback.classic.filter.ThresholdFilter">
+            <level>WARN</level>
+        </filter>
+        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+            <!-- Daily rollover: creates a new log file every day at midnight -->
+            <fileNamePattern>${ERROR_LOG_PATTERN}</fileNamePattern>
+            <!-- Keep 30 days worth of history -->
+            <maxHistory>${MAX_HISTORY}</maxHistory>
+        </rollingPolicy>
+        <encoder>
+            <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n%rEx</pattern>
+            <charset>UTF-8</charset>
+        </encoder>
+    </appender>
+
+    <!-- Dedicated Logger for REST Execution Filter -->
+    <logger name="REST_EXECUTION_LOGGER" level="INFO" additivity="false">
+        <appender-ref ref="CONSOLE"/>
+        <appender-ref ref="REST_EXECUTION_FILE"/>
+        <appender-ref ref="ERROR_FILE"/>
+    </logger>
+
+    <!-- Application Logger -->
+    <logger name="com.example.aicrud" level="DEBUG" additivity="true">
+        <appender-ref ref="ERROR_FILE"/>
+    </logger>
+
+    <!-- Root Logger -->
+    <root level="INFO">
+        <appender-ref ref="CONSOLE"/>
+        <appender-ref ref="ERROR_FILE"/>
+    </root>
+
+</configuration>
