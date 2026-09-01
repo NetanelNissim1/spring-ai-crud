@@ -1,0 +1,10 @@
+{
+  "version": 2,
+  "outputDirectory": "src/main/resources/static",
+  "routes": [
+    {
+      "src": "/(.*)",
+      "dest": "/src/main/resources/static/$1"
+    }
+  ]
+}

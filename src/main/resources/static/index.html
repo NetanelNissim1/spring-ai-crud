@@ -69,6 +69,10 @@
 
             <!-- פעולות מהירות -->
             <div class="flex items-center space-x-3 space-x-reverse">
+                <button onclick="openServerConfigModal()" title="הגדרות חיבור שרת (API Endpoint)" class="px-3 py-2 rounded-xl border border-slate-200 hover:bg-slate-100 text-slate-700 text-xs flex items-center gap-1.5 transition">
+                    <i class="fa-solid fa-server text-indigo-600"></i>
+                    <span class="hidden sm:inline">שרת API</span>
+                </button>
                 <button onclick="openMagicAiModal()" class="px-3.5 py-2 rounded-xl bg-gradient-to-l from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white font-medium text-xs flex items-center gap-1.5 shadow-sm transition">
                     <i class="fa-solid fa-wand-magic-sparkles"></i>
                     <span>מחולל מוצרים AI</span>
@@ -444,6 +448,34 @@
         </div>
     </div>
 
+    <!-- מודאל הגדרות שרת ענן (Cloud Backend / Vercel Settings) -->
+    <div id="serverModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-40 hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-slate-100 text-right">
+            <div class="flex items-center justify-between pb-4 border-b border-slate-100">
+                <div class="flex items-center gap-2 text-indigo-600">
+                    <i class="fa-solid fa-server text-xl"></i>
+                    <h3 class="text-lg font-bold text-slate-800">הגדרת חיבור שרת Backend</h3>
+                </div>
+                <button onclick="closeServerConfigModal()" class="text-slate-400 hover:text-slate-600 text-lg">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+            <div class="mt-4 space-y-4 text-xs">
+                <p class="text-slate-600">
+                    אם האפליקציה פרוסה ב-<strong>Vercel</strong>, הזן כאן את כתובת שרת ה-Spring Boot (לדוגמה: <code class="bg-slate-100 px-1 py-0.5 rounded font-mono">https://my-backend.onrender.com</code>). בהרצה מקומית, השאר שדה זה ריק.
+                </p>
+                <div>
+                    <label class="block font-semibold text-slate-700 mb-1">כתובת API Base URL</label>
+                    <input type="text" id="serverBaseUrlInput" placeholder="השאר ריק לברירת מחדל (Same Origin)" class="w-full px-3.5 py-2.5 border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:outline-none text-xs font-mono text-left" dir="ltr">
+                </div>
+                <div class="flex items-center justify-end gap-2 pt-4 border-t border-slate-100">
+                    <button type="button" onclick="closeServerConfigModal()" class="px-4 py-2 border border-slate-300 rounded-xl text-slate-600 hover:bg-slate-100 font-medium">ביטול</button>
+                    <button type="button" onclick="saveServerConfig()" class="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-semibold shadow-sm">שמור הגדרה</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- הודעת חיווי צפה (Toast) -->
     <div id="toast" class="fixed bottom-5 right-5 bg-slate-900 text-white px-4 py-3 rounded-2xl shadow-xl z-50 text-xs font-medium transform -translate-y-10 opacity-0 pointer-events-none transition-all duration-300 flex items-center gap-2">
         <i id="toastIcon" class="fa-solid fa-circle-check text-emerald-400 text-sm"></i>
@@ -458,6 +490,38 @@
         let currentCategory = '';
         let generatedAiData = null;
         let searchTimeout = null;
+
+        // תמיכה בפריסה בענן (Vercel / Render / Localhost)
+        function getApiUrl(path) {
+            const customBase = localStorage.getItem('API_BASE_URL') || '';
+            const cleanBase = customBase.replace(/\/+$/, '');
+            const cleanPath = path.startsWith('/') ? path : '/' + path;
+            return cleanBase + cleanPath;
+        }
+
+        function openServerConfigModal() {
+            document.getElementById('serverBaseUrlInput').value = localStorage.getItem('API_BASE_URL') || '';
+            document.getElementById('serverModal').classList.remove('hidden');
+        }
+
+        function closeServerConfigModal() {
+            document.getElementById('serverModal').classList.add('hidden');
+        }
+
+        function saveServerConfig() {
+            const url = document.getElementById('serverBaseUrlInput').value.trim();
+            if (url) {
+                localStorage.setItem('API_BASE_URL', url);
+                showToast('כתובת השרת עודכנה ל: ' + url);
+            } else {
+                localStorage.removeItem('API_BASE_URL');
+                showToast('כתובת השרת אופסה לברירת מחדל');
+            }
+            closeServerConfigModal();
+            loadCategories();
+            loadProducts();
+            loadStats();
+        }
 
         // אתחול האפליקציה בטעינה
         document.addEventListener('DOMContentLoaded', () => {
@@ -482,7 +546,7 @@
 
         async function loadCategories() {
             try {
-                const res = await fetch('/api/products/categories');
+                const res = await fetch(getApiUrl('/api/products/categories'));
                 if (res.ok) {
                     const categories = await res.json();
                     const select = document.getElementById('categoryFilter');
@@ -502,12 +566,12 @@
 
         async function loadStats() {
             try {
-                const resAll = await fetch('/api/products/all');
+                const resAll = await fetch(getApiUrl('/api/products/all'));
                 if (resAll.ok) {
                     const all = await resAll.json();
                     document.getElementById('statTotal').textContent = all.length;
                 }
-                const resLow = await fetch('/api/products/low-stock?threshold=10');
+                const resLow = await fetch(getApiUrl('/api/products/low-stock?threshold=10'));
                 if (resLow.ok) {
                     const low = await resLow.json();
                     document.getElementById('statLowStock').textContent = low.length;
@@ -528,7 +592,7 @@
             if (category) url += `&category=${encodeURIComponent(category)}`;
 
             try {
-                const res = await fetch(url);
+                const res = await fetch(getApiUrl(url));
                 if (res.ok) {
                     const data = await res.json();
                     renderTable(data);
@@ -657,7 +721,7 @@
         async function editProduct(id) {
             if (!id || id === 'undefined') return;
             try {
-                const res = await fetch(`/api/products/${id}`);
+                const res = await fetch(getApiUrl(`/api/products/${id}`));
                 if (res.ok) {
                     const product = await res.json();
                     openProductModal(product);
@@ -687,7 +751,7 @@
             const method = id ? 'PUT' : 'POST';
 
             try {
-                const res = await fetch(url, {
+                const res = await fetch(getApiUrl(url), {
                     method: method,
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(payload)
@@ -711,7 +775,7 @@
         async function deleteProduct(id) {
             if (!confirm(`האם אתה בטוח שברצונך למחוק את מוצר מספר #${id}?`)) return;
             try {
-                const res = await fetch(`/api/products/${id}`, { method: 'DELETE' });
+                const res = await fetch(getApiUrl(`/api/products/${id}`), { method: 'DELETE' });
                 if (res.ok) {
                     showToast('המוצר נמחק בהצלחה');
                     loadProducts(currentPage);
@@ -728,7 +792,7 @@
         async function enrichExistingProduct(id) {
             showToast('מנוע ה-AI מעשיר את מוצר מספר #' + id + '...');
             try {
-                const res = await fetch(`/api/ai/enrich/${id}`, { method: 'POST' });
+                const res = await fetch(getApiUrl(`/api/ai/enrich/${id}`), { method: 'POST' });
                 if (res.ok) {
                     const data = await res.json();
                     showToast('המוצר הועשר בהצלחה עם תקציר ותגיות AI!');
@@ -769,7 +833,7 @@
             document.getElementById('applyMagicBtn').classList.add('hidden');
 
             try {
-                const res = await fetch('/api/ai/enrich', {
+                const res = await fetch(getApiUrl('/api/ai/enrich'), {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ productName: name, targetAudience: audience })
@@ -834,7 +898,7 @@
             document.getElementById('reviewResult').classList.add('hidden');
 
             try {
-                const res = await fetch(`/api/ai/analyze-reviews/${id}`, {
+                const res = await fetch(getApiUrl(`/api/ai/analyze-reviews/${id}`), {
                     method: 'POST',
                     headers: { 'Content-Type': 'text/plain; charset=UTF-8' },
                     body: text
@@ -902,7 +966,7 @@
             const loadingId = appendChatMessage('ai', '<i class="fa-solid fa-spinner fa-spin ml-1"></i> חושב ומפעיל כלים (Tool Calling)...');
 
             try {
-                const res = await fetch('/api/ai/chat', {
+                const res = await fetch(getApiUrl('/api/ai/chat'), {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ message: message })
