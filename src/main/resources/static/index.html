@@ -684,13 +684,27 @@
             }
 
             const select = document.getElementById('categoryFilter');
-            select.innerHTML = '<option value="">כל הקטגוריות</option>';
-            categories.forEach(cat => {
-                const opt = document.createElement('option');
-                opt.value = cat;
-                opt.textContent = cat;
-                select.appendChild(opt);
-            });
+            const currentSelected = select.value;
+
+            // Check if categories list actually changed before re-rendering DOM options
+            const currentOptions = Array.from(select.options).map(o => o.value).filter(Boolean);
+            const isSame = currentOptions.length === categories.length && categories.every((cat, i) => cat === currentOptions[i]);
+
+            if (!isSame) {
+                select.innerHTML = '<option value="">כל הקטגוריות</option>';
+                categories.forEach(cat => {
+                    const opt = document.createElement('option');
+                    opt.value = cat;
+                    opt.textContent = cat;
+                    select.appendChild(opt);
+                });
+            }
+
+            // Always preserve user's active category filter selection
+            if (currentSelected && categories.includes(currentSelected)) {
+                select.value = currentSelected;
+            }
+
             document.getElementById('statCategories').textContent = categories.length;
         }
 
