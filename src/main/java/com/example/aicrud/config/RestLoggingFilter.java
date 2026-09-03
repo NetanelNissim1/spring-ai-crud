@@ -33,6 +33,12 @@ public class RestLoggingFilter extends OncePerRequestFilter {
         String method = request.getMethod();
         String clientIp = getClientIp(request);
 
+        // Inject Enterprise Security Headers
+        response.setHeader("X-Content-Type-Options", "nosniff");
+        response.setHeader("X-Frame-Options", "SAMEORIGIN");
+        response.setHeader("X-XSS-Protection", "1; mode=block");
+        response.setHeader("Referrer-Policy", "strict-origin-when-cross-origin");
+
         try {
             filterChain.doFilter(request, response);
         } finally {
